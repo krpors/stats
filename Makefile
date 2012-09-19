@@ -1,6 +1,6 @@
 all:
 	go get github.com/crazy2be/ini
-	go install -x github.com/krpors/stats
+	go install github.com/krpors/stats
 
 clean:
 	go clean -i github.com/krpors/stats

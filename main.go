@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
+	"path"
 	"regexp"
 	"sort"
 	"strings"
@@ -261,11 +262,10 @@ func AnalyzeAuthLog() ([]AuthFailure, error) {
 }
 
 // Fetches the network interfaces, returns them as a string.
-func GetInterfaces() []string {
+func GetInterfaces() ([]string, error) {
 	ifs, err := net.Interfaces()
 	if err != nil {
-		// TODO return err
-		return make([]string, 0)
+		return make([]string, 0), err
 	}
 
 	addrlist := make([]string, len(ifs))
@@ -282,7 +282,7 @@ func GetInterfaces() []string {
 		}
 	}
 
-	return addrlist
+	return addrlist, nil
 }
 
 // Actually sends the mail using the mail settings struct.
@@ -380,7 +380,7 @@ func PrepareMail() string {
 	ut, _ := GetUptime()
 	uptime := FormatDuration(&ut)
 	extIp, _ := GetExtIPAddress()
-	netwInterfaces := GetInterfaces()
+	netwInterfaces, _ := GetInterfaces()
 	failures, _ := AnalyzeAuthLog()
 	fsEntry, _ := GetFreeDiskSpace()
 
@@ -407,12 +407,17 @@ func ReadConfiguration() (map[string]string, error) {
 		return nil, errors.New("Cannot fetch current user")
 	}
 
-	var configFile string = u.HomeDir + "/.stats"
+	var configFilePath string = path.Join(u.HomeDir, ".config", "stats")
+	var configFile string = path.Join(configFilePath, "config")
 	var settings map[string]string = make(map[string]string)
 
 	file, err := os.Open(configFile)
 	if err != nil {
-		// If it doesn't exist, or the like, create it.
+		// If it doesn't exist, or the like, create it. First, create the directories
+		// required, if necessary.
+		if os.MkdirAll(configFilePath, 0700) != nil {
+			return nil, errors.New(fmt.Sprintf("Failed to create configuration directory `%s'", configFilePath))
+		}
 		fmt.Printf("Creating default configuration file `%s'\n", configFile)
 		file, err = os.Create(configFile)
 		if err != nil {
