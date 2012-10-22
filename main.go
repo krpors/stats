@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/crazy2be/ini"
 	"io/ioutil"
@@ -164,7 +163,7 @@ func GetExtIPAddress() (string, error) {
 func GetUptime() (time.Duration, error) {
 	ufile, err := ioutil.ReadFile("/proc/uptime")
 	if err != nil {
-		return 0, errors.New("Unable to read /proc/uptime")
+		return 0, fmt.Errorf("Unable to read /proc/uptime")
 	}
 
 	uptimestr := strings.Split(string(ufile), " ")
@@ -222,14 +221,14 @@ func AnalyzeAuthLog() ([]AuthFailure, error) {
 	infile := "/var/log/auth.log"
 	authlog, err := ioutil.ReadFile(infile)
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("Unable to read `%s': %s", infile, err))
+		return nil, fmt.Errorf("Unable to read `%s': %s", infile, err)
 	}
 
 	lines := strings.Split(string(authlog), "\n")
 
 	rex, err := regexp.Compile(".*Failed password for (.*) from (.*) port.*")
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("Failed to compile regular expression: %s", err))
+		return nil, fmt.Errorf("Failed to compile regular expression: %s", err)
 	}
 
 	// map with ip addresses, and amount of failed logins
@@ -397,14 +396,14 @@ func PrepareMail() string {
 }
 
 // Prepares configuration by reading the config file from the current user's
-// home directory. If the ~/.stats file does not exist, create it, and write 
-// the default configuration keys. The file is automatically chmodded to 0600,
+// home directory. If the ~/.config/stats/config file does not exist, create it, 
+// and write the default configuration keys. The file is automatically chmodded to 0600,
 // to prevent world readable permissions (it stores a plaintext password).
 func ReadConfiguration() (map[string]string, error) {
 	// get the current user, so we can get the home dir.
 	u, err := user.Current()
 	if err != nil {
-		return nil, errors.New("Cannot fetch current user")
+		return nil, fmt.Errorf("Cannot fetch current user")
 	}
 
 	var configFilePath string = path.Join(u.HomeDir, ".config", "stats")
@@ -416,18 +415,18 @@ func ReadConfiguration() (map[string]string, error) {
 		// If it doesn't exist, or the like, create it. First, create the directories
 		// required, if necessary.
 		if os.MkdirAll(configFilePath, 0700) != nil {
-			return nil, errors.New(fmt.Sprintf("Failed to create configuration directory `%s'", configFilePath))
+			return nil, fmt.Errorf("Failed to create configuration directory `%s'", configFilePath)
 		}
 		fmt.Printf("Creating default configuration file `%s'\n", configFile)
 		file, err = os.Create(configFile)
 		if err != nil {
 			// We need a config file, so Exit(1) when it failed.
-			return nil, errors.New(fmt.Sprintf("Failed to create configuration file `%s'\n", configFile))
+			return nil, fmt.Errorf("Failed to create configuration file `%s'\n", configFile)
 		}
 		// change permissions to be r/w to current user only. This file is
 		// storing a plain text password, so we must not make it world readable.
 		if err = file.Chmod(0600); err != nil {
-			return nil, errors.New(fmt.Sprintf("Failed to change permissions on configuration file `%s'\n", configFile))
+			return nil, fmt.Errorf("Failed to change permissions on configuration file `%s'\n", configFile)
 		}
 
 		defer file.Close()
@@ -443,7 +442,7 @@ func ReadConfiguration() (map[string]string, error) {
 		settings[SETTING_TO_ADDR] = "email@example.com"
 
 		if err = ini.Save(configFile, settings); err != nil {
-			return nil, errors.New(fmt.Sprintf("Unable to write to configuration file."))
+			return nil, fmt.Errorf("Unable to write to configuration file.")
 		}
 	}
 
