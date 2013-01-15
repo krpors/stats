@@ -139,11 +139,11 @@ func GetExtIPAddress() (string, error) {
 	}
 
 	resp, err := http.Get("http://jsonip.com")
-	// defer closing of the body
-	defer resp.Body.Close()
 	if err != nil {
 		return "", err
 	}
+	// defer closing of the body
+	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
